@@ -1,0 +1,8 @@
+build/
+dist/
+hkd/
+!ngm-15-19.mp3
+PackToExe.cmd
+*.json
+*.spec
+*.exe
