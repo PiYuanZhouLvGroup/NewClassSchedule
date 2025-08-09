@@ -3,6 +3,7 @@ dist/
 hkd/
 !ngm-15-19.mp3
 PackToExe.cmd
-*.json
+#*.json
 *.spec
 *.exe
+__pycache__

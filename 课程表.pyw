@@ -6,10 +6,10 @@ import tkinter
 import time
 import tkinter.ttk
 import json
-import io
 from tkinter import messagebox
 from pygame import mixer
 import traceback
+from copied import ToolTip
 
 # 不好意思，没有写注释的习惯，这可能是唯一一条有实际意义的注释
 
@@ -55,6 +55,7 @@ def on_see_through(*args):
         close()
     else:
         reopen()
+
 
 def _p(p):
     return os.path.join(getattr(sys, '_MEIPASS', '.'), p)
@@ -152,10 +153,17 @@ def play_ngm():
         mixer.music.queue(_p("hkd/ngm-15-19.mp3"))
 
 
+called_to_show_time = False
+
+
+def call_show_time():
+    global called_to_show_time
+    called_to_show_time = True
+
+
 close_events = [
     ("隐藏/显示", on_see_through),
     ("更改星期", change_weekday),
-    ("刷新时间", lambda: (root.after(0, update_now_time), root.after(0, update_info), root.after(0, check_iconic))),
     ("再按3次关闭", lambda: None),
     ("再按2次关闭", lambda: None),
     ("再按1次关闭", lambda: None),
@@ -212,8 +220,11 @@ def reopen(*args):
 #     root.after(10, move_back)
 # root.after(10, move_back)
 last_win = None
+
+
 def show_class(*args):
     global last_win
+
     def update(*args):
         now = datetime.datetime.today()
         now_t = datetime.time(now.hour, now.minute, now.second, now.microsecond)
@@ -239,7 +250,7 @@ def show_class(*args):
         rt2 = rt1 + datetime.timedelta(seconds=1)
         classes.reverse()
         index = classes.index(c)
-        sl = classes[max(index-1,0):max(index-1,0)+10]
+        sl = classes[max(index - 1, 0):max(index - 1, 0) + 10]
         if len(sl) < min(10, len(classes)):
             sl = classes[-min(10, len(classes)):]
         ni = sl.index(c)
@@ -255,16 +266,18 @@ def show_class(*args):
                 continue
             else:
                 clst = datetime.datetime(now.year, now.month, now.day, cls[1], cls[2], 0)
-                left.append(f"{tmp2 if (tmp2 := (tmp := clst-now+datetime.timedelta(seconds=1)).seconds//3600) else ''}"
-                            f"{':' if tmp2 else''}"
-                            f"{'0' if (tmp3 := (tmp.seconds%3600//60)) < 10 and tmp2 else ''}"
-                            f"{tmp3}"
-                            f":"
-                            f"{tmp.seconds%60:0>2}")
+                left.append(
+                    f"{tmp2 if (tmp2 := (tmp := clst - now + datetime.timedelta(seconds=1)).seconds // 3600) else ''}"
+                    f"{':' if tmp2 else ''}"
+                    f"{'0' if (tmp3 := (tmp.seconds % 3600 // 60)) < 10 and tmp2 else ''}"
+                    f"{tmp3}"
+                    f":"
+                    f"{tmp.seconds % 60:0>2}")
         left, right = '\n'.join(left), '\n'.join(right)
         leftvar.set(left)
         rightvar.set(right)
         win.after(10, update)
+
     if last_win:
         last_win.destroy()
     last_win = win = tkinter.Toplevel(root)
@@ -273,8 +286,8 @@ def show_class(*args):
     leftvar = tkinter.StringVar()
     rightvar = tkinter.StringVar()
     win.after(0, update)
-    tkinter.Label(win, textvariable=leftvar).pack(side="left")
-    tkinter.Label(win, textvariable=rightvar).pack(side="left")
+    tkinter.Label(win, textvariable=leftvar, font=('default', 12)).pack(side="left")
+    tkinter.Label(win, textvariable=rightvar, font=('default', 12)).pack(side="left")
 
 
 UI_parts = []
@@ -292,6 +305,7 @@ def UI_normal():
                              )
     ).pack()
     tmp.bind('<Button-3>', change_weekday)
+    ToolTip(tmp, '右键以更改星期')
     UI_parts.append(tmp)
     (
         tmp := tkinter.Label(root, textvariable=now_time,
@@ -299,15 +313,18 @@ def UI_normal():
                              )
     ).pack()
     now_time_label = tmp
+    ToolTip(tmp, '拖动以移动，右键切换功能')
     UI_parts.append(tmp)
     (
         tmp := tkinter.Label(root, textvariable=now_class,
                              anchor='w')
     ).pack()
     UI_parts.append(tmp)
+    ToolTip(tmp, '你可以一直右键那个时间试试，\n不要管它的警告', timeout=5 * 1000)
     (
         tmp := tkinter.ttk.Progressbar(root, length=250, maximum=1, variable=remain_time)
     ).pack()
+    ToolTip(tmp, '双击切换简易模式')
     tmp.bind('<Double-1>', swap_UI)
     UI_parts.append(tmp)
     (
@@ -315,6 +332,7 @@ def UI_normal():
                              anchor='w')
     ).pack()
     tmp.bind('<Double-1>', show_class)
+    ToolTip(tmp, '双击打开课程详情')
     UI_parts.append(tmp)
 
 
@@ -325,6 +343,7 @@ def UI_simple():
         tmp := tkinter.Label(root, textvariable=now_time, font=('default', 20, 'bold'), anchor='center', cursor='fleur')
     ).pack(side=('top' if sim_type == 'v' else 'left'))
     now_time_label = tmp
+    ToolTip(tmp, '拖动以移动，右键还原')
     UI_parts.append(tmp)
     (
         tmp := tkinter.ttk.Progressbar(root, orient=("vertical" if sim_type == 'v' else 'horizontal'), maximum=1,
@@ -332,6 +351,7 @@ def UI_simple():
     ).pack(side=('top' if sim_type == 'v' else 'left'))
     tmp.bind('<Double-1>', swap_UI)
     tmp.bind('<Button-2>', swap_sim)
+    ToolTip(tmp, '双击还原，按下鼠标滚轮切换横纵')
     UI_parts.append(tmp)
     (
         tmp := tkinter.Label(root, textvariable=now_class)
@@ -341,6 +361,7 @@ def UI_simple():
         tmp := tkinter.Label(root, textvariable=next_class)
     ).pack(side=('top' if sim_type == 'v' else 'left'))
     tmp.bind('<Double-1>', show_class)
+    ToolTip(tmp, '双击打开课程详情')
     UI_parts.append(tmp)
 
 
@@ -400,36 +421,42 @@ def update_now_time(*args):
 
 root.after(100, update_now_time)
 
+st_window = ...
 
-def show_time(end=..., titv=..., subv=..., tp=..., clsn=..., tm=..., start=True):
+
+def show_time(end=..., titv=..., subv=..., tp=..., clsn=..., cls=..., tm=..., start=True):
     global st_window, stl1, stl2
     if start:
+        if st_window is not ...:
+            return
         st_window = tkinter.Toplevel(root)
         st_window.attributes('-topmost', True)
         st_window.protocol("WM_DELETE_WINDOW", lambda: ...)
         st_window.overrideredirect(True)
         titv = tkinter.StringVar()
         (stl1 := tkinter.Label(st_window, textvariable=titv,
-                      anchor='center', font=('default', 30, 'bold'))).pack()
+                               anchor='center', font=('default', 30, 'bold'))).pack()
         subv = tkinter.StringVar()
         (stl2 := tkinter.Label(st_window, textvariable=subv,
-                      anchor='w', font=('default', 10))).pack()
-        st_window['bg'] = stl1['bg'] = stl2['bg'] = '#D6EEF4'
+                               anchor='w')).pack()
+        st_window['bg'] = stl1['bg'] = stl2['bg'] = '#D6EEF4' if tp in ('20min', 'ctst') else '#E6B0AF'
         st_window.geometry('+%s+%s' % (root.winfo_screenwidth(), 0))
-        root.after(10, lambda *_: show_time(end, titv, subv, tp, clsn, tm, False))
+        root.after(10, lambda *_: show_time(end, titv, subv, tp, clsn, cls, tm, False))
     else:
-        st_window.after(10, lambda *_: show_time(end, titv, subv, tp, clsn, tm, False))
+        st_window.after(10, lambda *_: show_time(end, titv, subv, tp, clsn, cls, tm, False))
         d = root.winfo_screenwidth() + st_window.winfo_width()
         titv.set(datetime.datetime.now().strftime('%H:%M:%S'))
-        subv.set((f'现在是：{clsn}' if datetime.datetime.now() > tm else f'接下来：{clsn}') if tp == 'clscg' else f'{(rt := tm - datetime.datetime.now() + datetime.timedelta(seconds=1)).seconds // 60}:{rt.seconds % 60:0>2}后: {clsn}')
-        nx = ((end-datetime.datetime.now())/datetime.timedelta(seconds=10))*d-st_window.winfo_width()
+        subv.set((
+                     f'Done!{cls}\n现在是：{clsn}' if datetime.datetime.now() > tm else f'现在是：{cls}\n接下来：{clsn}') if tp == 'clscg' else f'现在是：{cls}\n{(rt := tm - datetime.datetime.now() + datetime.timedelta(seconds=1)).seconds // 60}:{rt.seconds % 60:0>2}后: {clsn}')
+        nx = ((end - datetime.datetime.now()) / datetime.timedelta(seconds=10)) * d - st_window.winfo_width()
         st_window.geometry('+%s+%s' % (int(nx), 0))
         if (end - datetime.datetime.now()).seconds >= 5:
-            st_window['bg'] = stl1['bg'] = stl2['bg'] = '#D6EEF4'
+            st_window['bg'] = stl1['bg'] = stl2['bg'] = '#D6EEF4' if tp in ('20min', 'ctst') else '#E6B0AF'
         else:
-            st_window['bg'] = stl1['bg'] = stl2['bg'] = '#E9F1D8'
+            st_window['bg'] = stl1['bg'] = stl2['bg'] = {'20min': '#E9F1D8', 'ctst': '#D6EEF4', 'clscg': '#C8B9DA'}[tp]
         if nx < min(0, -st_window.winfo_width()):
             st_window.destroy()
+            st_window = ...
 
 
 now_class = tkinter.StringVar(root, '')
@@ -439,9 +466,11 @@ weekday = datetime.datetime.today().weekday() if "-w" not in sys.argv else int(s
 UI_normal()
 had_shown = False
 pass_midnight = False
+day_no = datetime.datetime.today().day
+
 
 def update_info(*args):
-    global had_shown, pass_midnight
+    global had_shown, pass_midnight, day_no, called_to_show_time
     try:
         now = datetime.datetime.today()
         now_t = datetime.time(now.hour, now.minute, now.second, now.microsecond)
@@ -474,14 +503,17 @@ def update_info(*args):
                 now_time.set('即将进入 新的一天')
             now_class.set('Entering a New Day')
             next_class.set('<1min后: 新的一天')
-        elif pass_midnight:
+        elif pass_midnight or datetime.datetime.today().day != day_no:
+            day_no = datetime.datetime.today().day
             pass_midnight = False
+
             def _update_weekday():
                 global weekday
                 weekday = datetime.datetime.today().weekday() if "-w" not in sys.argv else int(
                     sys.argv[sys.argv.index("-w") + 1])
                 first_line.set(f'{datetime.date.today().month}月{datetime.date.today().day}日  '
                                f'星期{ {0: "一", 1: "二", 2: "三", 3: "四", 4: "五", 5: "六", 6: "日"}[datetime.date.today().weekday()]}')
+
             _update_weekday()
         elif UI_type == 'normal' and not in_disappear:
             now_class.set(f'{1 - rt1 / at:.2%} ' + classes[index][0])
@@ -490,13 +522,16 @@ def update_info(*args):
             now_class.set(f'{1 - rt1 / at:.2%}')
             next_class.set(f'{rt2.seconds // 60}:{rt2.seconds % 60:0>2}')
         if rt2.seconds <= 5 and not had_shown:
-            show_time(end=now+datetime.timedelta(seconds=10), tp='clscg', clsn=nc[0], tm=nct)
+            show_time(end=now + datetime.timedelta(seconds=10), tp='clscg', clsn=nc[0], cls=c[0], tm=nct)
             had_shown = True
         elif now.minute % 20 == 19 and now.second >= 55 and not had_shown:
-            show_time(end=now+datetime.timedelta(seconds=10), tp='20min', clsn=nc[0], tm=nct)
+            show_time(end=now + datetime.timedelta(seconds=10), tp='20min', clsn=nc[0], cls=c[0], tm=nct)
             had_shown = True
         elif had_shown and rt2.seconds > 5 and not (now.minute % 20 == 19 and now.second >= 55):
             had_shown = False
+        if called_to_show_time:
+            show_time(end=now + datetime.timedelta(seconds=10), tp='ctst', clsn=nc[0], cls=c[0], tm=nct)
+            called_to_show_time = False
     except Exception as e:
         now_class.set('出现问题了')
         next_class.set('出现问题了')
@@ -507,8 +542,11 @@ def update_info(*args):
 
 root.after(0, update_info)
 
+mtd = time.monotonic() - time.time()
+
 
 def check_iconic():
+    global mtd
     if root.state() == "iconic":
         root.deiconify()
         global UI_type
@@ -518,6 +556,19 @@ def check_iconic():
         root.geometry('+0+' + geo.split('+')[-1])
     root.geometry(f'+{max(0, min(root.winfo_screenwidth() - root.winfo_width(), int(root.geometry().split("+")[-2])))}'
                   f'+{max(0, min(root.winfo_screenheight() - root.winfo_height() - 30, int(root.geometry().split("+")[-1])))}')
+    if abs(time.monotonic() - time.time() - mtd) >= 1:
+        if time.monotonic() - time.time() >= mtd:
+            print('turn backward')
+            time.sleep(1)
+            print('try to recover')
+            root.after(0, update_now_time)
+            root.after(0, update_info)
+            root.after(0, check_iconic)
+            mtd = time.monotonic() - time.time()
+            return
+        else:
+            print('turn forward')
+            mtd = time.monotonic() - time.time()
     root.after(10, check_iconic)
 
 
@@ -525,38 +576,41 @@ root.after(0, check_iconic)
 in_disappear = False
 
 
-def disappear():
+def disappear(cl, on_call=False):
     global in_disappear
+    if on_call:
+        def on_appear(*args):
+            global in_disappear
+            dw.destroy()
+            root.deiconify()
+            in_disappear = False
 
-    def on_appear(*args):
-        global in_disappear
-        dw.destroy()
-        root.deiconify()
-        in_disappear = False
+        def upp(count=0):
+            # print(int((root.winfo_screenwidth() - dw.winfo_width()) * (float(now_class.get()[:-1]) / 100)))
+            dw.geometry(
+                f'+{int((root.winfo_screenwidth() - dw.winfo_width()) * float(now_class.get()[:-1]) / 100)}+{0}')
+            btnv.set(f'now {now_time.get()}' if (count // 1000) % 3 == 0
+                     else (f'{now_class.get()}' if (count // 1000) % 3 == 1
+                           else f'left {next_class.get()}'))
+            btn['fg'] = ('blue' if (count // 1000) % 3 == 0
+                         else ('green' if (count // 1000) % 3 == 1
+                               else 'red'))
+            count += 1
+            count %= 1000 * 3
+            dw.after(10, lambda: upp(count))
 
-    def upp(count=0):
-        # print(int((root.winfo_screenwidth() - dw.winfo_width()) * (float(now_class.get()[:-1]) / 100)))
-        dw.geometry(f'+{int((root.winfo_screenwidth() - dw.winfo_width()) * float(now_class.get()[:-1]) / 100)}+{0}')
-        btnv.set(f'now {now_time.get()}' if (count // 1000) % 3 == 0
-                 else (f'{now_class.get()}' if (count // 1000) % 3 == 1
-                       else f'left {next_class.get()}'))
-        btn['fg'] = ('blue' if (count // 1000) % 3 == 0
-                     else ('green' if (count // 1000) % 3 == 1
-                           else 'red'))
-        count += 1
-        count %= 1000 * 3
-        dw.after(10, lambda: upp(count))
-
-    dw = tkinter.Toplevel(root)
-    btnv = tkinter.StringVar()
-    (btn := tkinter.Button(dw, bg='white', textvariable=btnv, command=on_appear)).pack()
-    dw.attributes('-topmost', True)
-    dw.overrideredirect(True)
-    dw.update()
-    dw.after(10, upp)
-    dw.after(40 * 60 * 1000, on_appear)
-    root.withdraw()
-    in_disappear = True
+        dw = tkinter.Toplevel(root)
+        btnv = tkinter.StringVar()
+        (btn := tkinter.Button(dw, bg='white', textvariable=btnv, command=on_appear)).pack()
+        dw.attributes('-topmost', True)
+        dw.overrideredirect(True)
+        dw.update()
+        dw.after(10, upp)
+        dw.after(int(cl.split(" ")[1]) * 60 * 1000, on_appear)
+        root.withdraw()
+        in_disappear = True
+    else:
+        return '/消失不见 [时长]' if cl == '/xsbj' else f'/消失不见 {cl.split(" ")[1] if cl.split(" ")[1] else "?"}分钟'
 
 
 def lock():
@@ -566,7 +620,7 @@ def lock():
 
 
 def restart():
-    os.system('start '+' '.join(sys.argv))
+    os.system('start ' + ' '.join(sys.argv))
     root.destroy()
 
 
@@ -574,6 +628,8 @@ stopping_follow = False
 follow_on_start = True
 stop_follow_id = ...
 pos = []
+
+
 def follow():
     global stopping_follow, follow_on_start, stop_follow_id, pos
     if follow_on_start:
@@ -581,23 +637,23 @@ def follow():
         follow_on_start = False
         stop_follow_id = root.bind('<Button-1>', stop_follow)
         pos = [root.winfo_x(), root.winfo_y()]
-    center = root.winfo_x()+root.winfo_width()//2, root.winfo_y()+root.winfo_height()//2
+    center = root.winfo_x() + root.winfo_width() // 2, root.winfo_y() + root.winfo_height() // 2
     mouse = root.winfo_pointerxy()
     try:
-        k = ((center[0]-mouse[0]+1e-10)/(center[1]-mouse[1]+1e-10))
-        d = math.sqrt((center[0]-mouse[0])**2+(center[1]-mouse[1])**2)/100
-        dx = math.copysign(math.sqrt(d**2/(1+(1/(k*k)))), mouse[0]-center[0])
-        dy = math.copysign(math.sqrt(d**2/(1+k*k)), mouse[1]-center[1])
+        k = ((center[0] - mouse[0] + 1e-10) / (center[1] - mouse[1] + 1e-10))
+        d = math.sqrt((center[0] - mouse[0]) ** 2 + (center[1] - mouse[1]) ** 2) / 100
+        dx = math.copysign(math.sqrt(d ** 2 / (1 + (1 / (k * k)))), mouse[0] - center[0])
+        dy = math.copysign(math.sqrt(d ** 2 / (1 + k * k)), mouse[1] - center[1])
         pos[0] += dx
         pos[1] += dy
         if pos[0] < 0:
             pos[0] = 0
-        elif pos[0] > root.winfo_screenwidth()-root.winfo_width():
-            pos[0] = root.winfo_screenwidth()-root.winfo_width()
+        elif pos[0] > root.winfo_screenwidth() - root.winfo_width():
+            pos[0] = root.winfo_screenwidth() - root.winfo_width()
         if pos[1] < 0:
             pos[1] = 0
-        elif pos[1] > root.winfo_screenheight()-root.winfo_height()-30:
-            pos[1] = root.winfo_screenheight()-root.winfo_height()-30
+        elif pos[1] > root.winfo_screenheight() - root.winfo_height() - 30:
+            pos[1] = root.winfo_screenheight() - root.winfo_height() - 30
     except ZeroDivisionError:
         pass
     else:
@@ -607,6 +663,7 @@ def follow():
     else:
         stopping_follow = False
         follow_on_start = True
+
 
 def stop_follow(*args):
     global stopping_follow
@@ -626,7 +683,7 @@ c_list = []
 c_after = None
 on_key_event = False
 commands = {
-    '/xsbj': ['<消失不见>', disappear],  #
+    '/xsbj': ['#!dynamic', disappear],
     '/ngm': ['<你干嘛~>', play_ngm],
     '/你干嘛': ['<你干嘛~>', play_ngm],
     '/cgwd': ['<更改星期>', change_weekday],
@@ -634,11 +691,14 @@ commands = {
     '/PiYuanZhouLv牛逼666': ['/PiYuanZhouLv牛逼666', unlock],
     '/close': ['<关闭>', on_really_close],
     '/restart': ['<重启课程表>', restart],
-    '/114514': ['<好臭啊>', lambda: webbrowser.open("https://www.bilibili.com/video/BV123411c787/?spm_id_from=333.337.search-card.all.click")],
+    '/114514': ['<好臭啊>', lambda: webbrowser.open(
+        "https://www.bilibili.com/video/BV123411c787/?spm_id_from=333.337.search-card.all.click")],
     '/b': ['<打开 B站>', lambda: webbrowser.open("https://www.bilibili.com")],
     '/xwzk': ["<打开 新闻周刊>", lambda: webbrowser.open("https://tv.cctv.com/lm/xwzk/index.shtml")],
-    '/follow': ["<跟着我>", follow]
+    '/follow': ["<跟着我>", follow],
+    '/show': ['<显示时间>', call_show_time]
 }
+
 
 def on_key(event):
     global c_after, on_key_event
@@ -653,8 +713,11 @@ def on_key(event):
     else:
         c_list.append(event.char if event.keycode not in (191, 12289) else '/')
     c_after = root.after(10000, command_cancel)
-    if ''.join(c_list) in commands:
-        now_time.set(commands[''.join(c_list)][0])
+    if (cf := ''.join(c_list)) in commands or cf.split(' ')[0] in commands:
+        if (nm := commands[''.join(c_list).split(' ')[0]][0]) != '#!dynamic':
+            now_time.set(nm)
+        else:
+            now_time.set(commands[''.join(c_list).split(' ')[0]][1](''.join(c_list)))
     else:
         now_time.set(''.join(c_list))
 
@@ -664,10 +727,14 @@ def on_command(*args):
     if not on_key_event:
         return
     on_key_event = False
-    if ''.join(c_list) not in commands:
+    if (''.join(c_list) not in commands) and (''.join(c_list).split(' ')[0] not in commands):
         messagebox.showerror('未知命令', f'未知的命令"{"".join(c_list)}"')
     else:
-        root.after(0, commands[''.join(c_list)][1])
+        if commands[''.join(c_list).split(' ')[0]][0] != '#!dynamic':
+            root.after(0, commands[''.join(c_list)][1])
+        else:
+            cc = c_list[:]
+            root.after(0, lambda: commands[''.join(cc).split(' ')[0]][1](''.join(cc), on_call=True))
     c_list = []
 
 
@@ -709,4 +776,5 @@ root.protocol("WM_DELETE_WINDOW", on_close)
 now_time_label.bind('<B1-Motion>', dragging)
 now_time_label.bind('<ButtonRelease-1>', end_drag)
 now_time_label.bind('<Button-3>', on_close)
+
 root.mainloop()
